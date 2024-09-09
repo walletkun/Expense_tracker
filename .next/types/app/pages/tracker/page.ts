@@ -1,4 +1,4 @@
-// File: /Users/ceo/Desktop/headstarter_SWE/week_2/inventory/app/pages/tracker/page.jsx
+// File: /Users/ceo/Desktop/headstarter_SWE/week_2/Expense_tracker/inventory/app/pages/tracker/page.jsx
 import * as entry from '../../../../../app/pages/tracker/page.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 

@@ -1,4 +1,4 @@
-// File: /Users/ceo/Desktop/headstarter_SWE/week_2/inventory/app/layout.jsx
+// File: /Users/ceo/Desktop/headstarter_SWE/week_2/Expense_tracker/inventory/app/layout.jsx
 import * as entry from '../../../app/layout.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 

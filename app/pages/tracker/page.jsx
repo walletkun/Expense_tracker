@@ -14,6 +14,10 @@ import {
 } from "firebase/firestore";
 import { db } from "@/app/firebase";
 import { motion } from "framer-motion";
+import { useRouter } from "next/navigation";
+
+//Authentication
+import { UserAuth } from "../context/AuthContext";
 
 export default function Home() {
   const [items, setItems] = useState([]);
@@ -23,23 +27,34 @@ export default function Home() {
   const [itemToEdit, setItemToEdit] = useState({});
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [toggleMode, setToggleMode] = useState(false);
+  const { user } = UserAuth();
+  const router = useRouter();
+
+  //Redirect if not authenticated
+  useEffect(() => {
+    if (!user) {
+      router.push("/");
+      alert("Please sign in to access this page");
+    }
+  }, [user, router]);
 
   //Fetching items from database
   useEffect(() => {
-    const q = query(collection(db, "items"));
-    const unsubscribe = onSnapshot(q, (QuerySnapshot) => {
-      const itemsArr = QuerySnapshot.docs.map((doc) => ({
-        ...doc.data(),
-        id: doc.id,
-      }));
-      setItems(itemsArr);
+    if (user) {
+      const q = query(collection(db, `users/${user.uid}/items`));
+      const unsubscribe = onSnapshot(q, (QuerySnapshot) => {
+        const itemsArr = QuerySnapshot.docs.map((doc) => ({
+          ...doc.data(),
+          id: doc.id,
+        }));
+        setItems(itemsArr);
 
-      // Calculate total after setting items
-      calculateTotal(itemsArr);
-    });
-
-    return () => unsubscribe();
-  }, []);
+        // Calculate total after setting items
+        calculateTotal(itemsArr);
+      });
+      return () => unsubscribe();
+    }
+  }, [user]);
 
   const calculateTotal = (itemsArray) => {
     const totalPrice = itemsArray.reduce(
@@ -52,24 +67,24 @@ export default function Home() {
   //Add item to database
   const addItem = async (e) => {
     e.preventDefault();
-    if (newItem.name === "" || newItem.price < 0) return;
-    else {
-      //if the item already exists, prompt user a modal say it already exist
+    if (newItem.name === "" || newItem.price <= 0) {
+      alert("Please enter a valid item or price");
+      return; 
+    } else {
+      //If item exists and user want to add it again, update the price otherwise just add the item
       const itemExists = items.find(
         (item) =>
           item.name.trim().toLowerCase() ===
-            newItem.name.trim().toLowerCase() &&
-          parseFloat(item.price).toFixed(2) ===
-            parseFloat(newItem.price).toFixed(2)
+            newItem.name.trim().toLowerCase()
       );
-
       if (itemExists) {
-        alert("Item with the same price already exists");
-        return;
+        await updateDoc(doc(db, `users/${user.uid}/items`, itemExists.id), {
+          price: parseFloat(itemExists.price) + parseFloat(newItem.price),
+        });
       } else {
-        await addDoc(collection(db, "items"), {
-          name: newItem.name.trim(),
-          price: newItem.price.trim(),
+        await addDoc(collection(db, `users/${user.uid}/items`), {
+          name: newItem.name.trim().toUpperCase(),
+          price: parseFloat(newItem.price),
         });
       }
     }
@@ -92,10 +107,10 @@ export default function Home() {
       );
 
       if (itemToRemove) {
-        await deleteDoc(doc(db, "items", itemToRemove.id));
-        setDeleteItem({ name: "", price: "0" }); // Reset deleteItem state
+        await deleteDoc(doc(db, `users/${user.uid}/items`, itemToRemove.id));
+        setDeleteItem({ name: "", price: 0 }); // Reset deleteItem state
       } else {
-        if (deleteItem.price === "" || deleteItem.price < parseFloat(0)) {
+        if (deleteItem.price === "" || parseFloat(deleteItem.price) < 0) {
           alert("Please enter a valid price");
         }
         alert("Item not found");
@@ -105,24 +120,22 @@ export default function Home() {
     }
   };
 
-  //Edit item from database
-  const editItem = async () => {};
-
   //Open modal to edit item
   const handleEditClick = (item) => {
     setItemToEdit(item);
     setEditModalOpen(true);
   };
 
+  //Edit item from firestore
   const handleEditItem = async (e) => {
     e.preventDefault();
     if (itemToEdit.price <= 0) {
-      await deleteDoc(doc(db, "items", itemToEdit.id));
+      await deleteDoc(doc(db, `users/${user.uid}/items`, itemToEdit.id));
       setEditModalOpen(false);
     } else {
-      await updateDoc(doc(db, "items", itemToEdit.id), {
+      await updateDoc(doc(db, `users/${user.uid}/items`, itemToEdit.id), {
         name: itemToEdit.name,
-        price: itemToEdit.price,
+        price: parseFloat(itemToEdit.price),
       });
       setEditModalOpen(false);
     }
@@ -131,8 +144,6 @@ export default function Home() {
   const handleEditChange = (e) => {
     setItemToEdit({ ...itemToEdit, [e.target.name]: e.target.value });
   };
-
-
 
   //Setting the toggle mode
   const handleSubmit = (e) => {
@@ -224,12 +235,14 @@ export default function Home() {
             })}
           </ul>
           {editModalOpen && (
-            <div className="modal fixed top-0 left-0 w-full h-full bg-black bg-opacity-50 flex justify-center items-center"
-            onClick={(e) => {
-              if(e.target === e.currentTarget) {
-                setEditModalOpen(false);
-              }
-            }}>
+            <div
+              className="modal fixed top-0 left-0 w-full h-full bg-black bg-opacity-50 flex justify-center items-center"
+              onClick={(e) => {
+                if (e.target === e.currentTarget) {
+                  setEditModalOpen(false);
+                }
+              }}
+            >
               <div className="bg-slate-800 p-4 rounded-lg items-center">
                 <form onSubmit={handleEditItem}>
                   <div className="flex flex-col">

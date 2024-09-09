@@ -5,6 +5,9 @@ import "./globals.css";
 import PageTransition from "./components/PageTransition";
 import Navbar from "./components/Navbar";
 
+//Client wrapper
+import ClientWrapper from "./ClientWrapper";
+
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -28,12 +31,9 @@ export default function RootLayout({ children }) {
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased relative`}
       >
-        <PageTransition>
-          <div className="flex-row flex gap-5 items-center justify-center navbar-container z-50">
-            <Navbar />
-          </div>
+         <ClientWrapper>
           {children}
-        </PageTransition>
+        </ClientWrapper>
       </body>
     </html>
   );
